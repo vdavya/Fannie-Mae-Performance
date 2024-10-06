@@ -1,0 +1,452 @@
+---
+title: "Exploring Fannie Mae's Mortgage Loan Performance Data"
+author: Davya Vuyyuru
+format: html
+output: bookdown::html_document2
+toc: false
+editor: visual
+---
+
+```{=html}
+<!This block assists in formatting the title, font size, chart caption, etc.– –>
+<style type="text/css">
+  .title {
+    text-align: left;
+}
+body{ /* Normal  */
+      font-size: 16px;
+      margin: 2.5cm;
+      top: 1.5cm;
+      text-align: justify;
+  }
+  .caption {
+    font-size: big;
+    text-align: center;
+    position: above;
+}
+</style>
+```
+```{css plotly-caption, echo = FALSE}
+/*Include this block if you like the chart caption at the top instead of the bottom.*/
+div.figure {
+  display: table;
+}
+div.figure p {
+  display: table-caption;
+  caption-side: top;
+}
+```
+
+------------------------------------------------------------------------
+
+Fannie Mae, a key player in the US housing market, holds a pivotal role in purchasing home mortgages and ensuring liquidity in the secondary mortgage market. The organization's profitability is closely tied to borrower default rates, making it imperative to analyze loan performance trends meticulously.
+
+Figure \@ref(fig:timeseries) depicts an interactive time series graphic that dynamically illustrates the volatility of default rates over time. Notably, the peak default rate of 0.091 happened in 2007. In subsequent years, default rates have gradually decreased, demonstrating a favourable trend in loan performance. This conclusion is supported by Figure \@ref(fig:linechart), which analyses default rate trends from 2007 to 2019, revealing that default rates were significantly higher in 2007 than in 2019.
+
+A deeper examination of the variables driving default rates uncovers more relationships. As illustrated in Figure \@ref(fig:cm07), there is a larger positive link between Borrower Credit Score, Original Loan to Value Ratio, and Original Rate. This shows that consumers with higher credit scores are more likely to obtain larger loans at higher interest rates, showing greater financial stability. Similarly, Figure \@ref(fig:cm19) shows a positive association between longer-term loans and higher credit scores in 2019, emphasising the relationship between creditworthiness and loan performance. Borrowers with higher credit ratings not only get larger loans, but they also show more financial stability over time, which can contribute to better loan performance and reduced default rates.
+
+Moving on to the distribution of loans across different vendors, Figure \@ref(fig:bc07) and Figure \@ref(fig:bc19) show a significant growth in the number of loans provided over time. This expansion indicates a thriving market and possibly loosened lending practices. Furthermore, this tendency is consistent with the increase in credit scores seen in Figure \@ref(fig:hist07) and Figure \@ref(fig:hist19), where the desirable credit score range increased from 650 -750 to 750 - 800. Lenders may have changed their lending criteria to target more creditworthy applicants, adding to an increase in loan issuance.
+
+Further examination of market dynamics demonstrates a significant decline in average original interest rates from 2007 to 2019, as seen in Figure \@ref(fig:map07) and Figure \@ref(fig:map19) The range was from 6.2 to 6.8 and 3.5 to 4.2. This significant shift shows that lending conditions and market dynamics have changed, possibly as a result of increased competition among lenders. The relationship between the increase in the number of loans provided and the decrease in interest rates emphasises the influence of market forces on interest rate changes.
+
+In conclusion, these comprehensive analyses offer valuable insights into Fannie Mae's operations and the broader mortgage market landscape. By understanding loan performance trends and market dynamics, stakeholders can make informed decisions to promote stability and affordability in the housing market, thus fostering a more resilient and sustainable housing ecosystem.
+
+Finally, these in-depth evaluations provide useful insights into Fannie Mae's operations and the broader mortgage market. Understanding loan performance patterns and market dynamics allows stakeholders to make educated decisions that support stability and affordability in the housing market, resulting in a more resilient and sustainable housing ecosystem.
+
+word count: 495
+
+### Figure Appendix {.unnumbered}
+
+```{r, include = FALSE}
+# This is the code block for tasks that do not generate charts, such as loading data, importing packages, data cleaning, and variable manipulation. 
+
+#Importing Packages
+
+library(tidyverse)
+library(gganimate)
+library(gifski)
+library(ggplot2)
+library(corrplot)
+library(scales)
+library(zoo)
+library(dplyr)
+library(plotly)
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+options(warn = -1)
+
+```
+
+```{r, include = FALSE}
+
+#Load Datasets 
+
+default_rate <- read.csv('/Users/davya/Desktop/davya_v/UMD/Subjects/Sem 2/Data Visualization and Web Analytics/Project/default_rate_ts.csv')
+
+data_2007 <- readRDS('/Users/davya/Desktop/davya_v/UMD/Subjects/Sem 2/Data Visualization and Web Analytics/Project/data_sample_2007Q4.rds')
+
+data_2019 <- readRDS('/Users/davya/Desktop/davya_v/UMD/Subjects/Sem 2/Data Visualization and Web Analytics/Project/data_sample_2019Q4.rds')
+
+```
+
+```{r, include = FALSE}
+
+#Data Cleaning: default_rate Dataframe
+
+#Remove Null Values
+default_rate <- default_rate %>%
+  select_if(~ !all(is.na(.)))
+```
+
+```{r, include = FALSE}
+
+# 2007 Data
+
+#Factor Variables 
+data_2007 <- data_2007 %>%
+  mutate(
+    CHANNEL = as.factor(CHANNEL),
+    SELLER = as.factor(SELLER),
+    NUM_BO = as.factor(NUM_BO),
+    FIRST_FLAG = as.factor(FIRST_FLAG),
+    PURPOSE = as.factor(PURPOSE),
+    OCC_STAT = as.factor(OCC_STAT),
+    STATE = as.factor(STATE)
+  )
+
+#Remove Null Values
+data_2007 <- na.omit(data_2007)
+
+#Edit seller names 
+data_2007 <- data_2007 %>%
+  mutate(
+    SELLER = str_replace(SELLER, "JPMorgan Chase Bank, National Association", "JPMorgan Chase Bank, N.A."),
+    SELLER = str_replace(SELLER, "Chase Home Finance, Llc", "Chase Home Finance, LLC"),
+    SELLER = str_replace(SELLER, "Fdic, Receiver, Indymac Federal Bank Fsb", "FDIC, Receiver, IndyMac Federal Bank FSB"),
+    SELLER = str_replace(SELLER, "Truist Bank \\(formerly SunTrust Bank\\)", "Truist Bank"),
+    SELLER = str_replace(SELLER, "Truist Bank", "Truist Bank")
+  )
+```
+
+```{r, include = FALSE}
+
+# 2019 Data
+
+#Factor Variables 
+data_2019 <- data_2019 %>%
+  mutate(
+    CHANNEL = as.factor(CHANNEL),
+    SELLER = as.factor(SELLER),
+    NUM_BO = as.factor(NUM_BO),
+    FIRST_FLAG = as.factor(FIRST_FLAG),
+    PURPOSE = as.factor(PURPOSE),
+    OCC_STAT = as.factor(OCC_STAT),
+    STATE = as.factor(STATE)
+  )
+
+#Remove Null Values
+data_2019 <- na.omit(data_2019)
+
+#Edit seller names 
+data_2019 <- data_2019 %>%
+  mutate(
+    SELLER = str_replace(SELLER, "United Shore Financial Services, LLC dba United Wholesale Mortgage", "United Wholesale Mortgage, LLC"),
+    SELLER = str_replace(SELLER,  "JPMorgan Chase Bank, National Association", "JPMorgan Chase Bank, N.A."),
+    SELLER = str_replace(SELLER, "Truist Bank \\(formerly SunTrust Bank\\)", "Truist Bank"),
+    SELLER = str_replace(SELLER, "Truist Bank", "Truist Bank")
+  )
+```
+
+```{r, include = FALSE}
+
+#line Chart for 2007 and 2019
+
+default_rate$Date <- as.Date(default_rate$Date, format = "%m/%d/%Y")
+default_rate$Year <- year(default_rate$Date)
+default_rate$Month <- month(default_rate$Date)
+
+
+df_2007 <- default_rate[default_rate$Year == 2007, ]
+df_2019 <- default_rate[default_rate$Year == 2019, ]
+```
+
+```{r timeseries, echo = FALSE, fig.width=10, fig.height = 4, fig.cap="The interactive time series chart visualizes the \nfluctuation of the default rate over the years"}
+
+
+p <- ggplot(data = default_rate, aes(x = Date, y = Default.rate)) +
+  geom_line(color="#ECA191") +
+  geom_point(color="#6B2213") +
+  theme_classic() + 
+  labs(x = 'Year', y = 'Default Rate') + 
+  theme(axis.text = element_text(face="bold",size=10),
+        axis.title = element_text(face="bold",size=12),
+        axis.title.x = element_text(margin = margin(t=10)),
+        panel.grid.major.y = element_line(color="grey85"))
+ggplotly(p)
+
+
+```
+
+<br>
+
+```{r linechart, echo = FALSE, fig.width=10, fig.height = 4, fig.cap="This line chart illustrates the variation of the default rate between 2007 and 2019"}
+
+ggplot() +
+  geom_line(data = df_2007, aes(x = Month, y = Default.rate, color = "2007"), size = 1) +
+  geom_line(data = df_2019, aes(x = Month, y = Default.rate, color = "2019"), size = 1) +
+  labs(x = "Month", y = "Default Rate", color = "Year") +
+  scale_color_manual(values = c("2007" = "#499AFF", "2019" = "#FF5349")) +
+  theme_minimal() +
+  theme(axis.text = element_text(face="bold",size=10),
+        axis.title = element_text(face="bold",size=12))+
+  scale_x_continuous(breaks = seq(1, 12, by = 2))
+
+
+```
+
+<br>
+
+```{r, include = FALSE}
+
+# Correlation matrix - 2007
+correlation_matrix2007 <- 
+  cor(data_2007[, c("LOAN_AGE", "ORIG_RATE", "OLTV", "DTI", "CSCORE_B")])
+
+
+data <- correlation_matrix2007 %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "Var1") %>%
+  pivot_longer(cols = -Var1, names_to = "Variable", values_to = "corr")
+
+# Correlation Matrix- 2019 
+
+correlation_matrix2019 <- 
+  cor(data_2019[, c("LOAN_AGE", "ORIG_RATE", "OLTV", "DTI", "CSCORE_B")])
+
+
+data19 <- correlation_matrix2019 %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "Var1") %>%
+  pivot_longer(cols = -Var1, names_to = "Variable", values_to = "corr")
+
+```
+
+```{r cm07, echo = FALSE, fig.width=10, fig.height = 4, fig.cap="The Correlation Matrix visually represents the interrelationship among selected variables within the 2007 dataset"}
+
+data %>%
+  ggplot(aes(x = Var1, y = Variable, fill = corr)) + 
+  geom_tile() +
+  geom_text(aes(label = round(corr, 2)), color = "black") +  # Add label aesthetic mapping here
+  theme_minimal() +
+  labs(x = NULL, y = NULL) +
+  theme(
+    axis.title = element_text(face = "bold", margin = margin(t = 10))) +
+  scale_x_discrete(labels = c("Loan Age", "Original\nRate", "Original Loan\nTo Ratio\nValue", "Debt to \nIncome", "Borrower\nCredit Score")) +
+  scale_y_discrete(labels = c("Loan Age", "Original\nRate", "Original Loan\nTo Ratio\nValue", "Debt to \nIncome", "Borrower\nCredit Score")) +
+  scale_fill_gradient2(name = "Correlation", midpoint = 0, limits = c(-1, 1),
+                       low = "#ea5d88", mid = "#f9f3fa", high = "#c82451")
+
+```
+
+<br>
+
+```{r cm19, echo = FALSE, fig.width=10, fig.height = 4, fig.cap="The Correlation Matrix visually represents the interrelationship among selected variables within the 2019 dataset"}
+
+data19 %>%
+  ggplot(aes(x = Var1, y = Variable, fill = corr)) + 
+  geom_tile() +
+  geom_text(aes(label = round(corr, 2)), color = "black") +  # Add label aesthetic mapping here
+  theme_minimal() +
+  labs(x = NULL, y = NULL) +
+  theme(
+    axis.title = element_text(face = "bold", margin = margin(t = 10))) +
+  scale_x_discrete(labels = c("Loan Age", "Original\nRate", "Original Loan\nTo Ratio\nValue", "Debt to \nIncome", "Borrower\nCredit Score")) +
+  scale_y_discrete(labels = c("Loan Age", "Original\nRate", "Original Loan\nTo Ratio\nValue", "Debt to \nIncome", "Borrower\nCredit Score")) +
+  scale_fill_gradient2(name = "Correlation", midpoint = 0, limits = c(-1, 1),
+                       low = "#4D4DFF", mid = "#CCCCFF", high = "#4B0082")
+```
+
+<br>
+
+```{r, include = FALSE}
+
+seller_loan_counts <- data_2007 %>%
+  group_by(SELLER) %>%
+  summarise(Loan_Count = n()) %>%
+  arrange(desc(Loan_Count))  
+
+```
+
+```{r bc07, echo = FALSE, fig.width=10, fig.height = 4, fig.cap="The bar chart displays the distribution of loans across all sellers for the year 2007"}
+
+top_sellers_plot <- ggplot(seller_loan_counts, aes(x =Loan_Count , y = reorder(SELLER, Loan_Count), text = paste("Seller: ", SELLER, "<br>Loan Count: ", Loan_Count)))+
+  geom_bar(stat = "identity", fill = "orange") +
+  labs(x = "Number of Loans", y = NULL) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(vjust = 0.5, hjust=1, size = 10),
+        axis.text.y = element_text(size = 10),  
+        axis.title = element_text(size = 10))
+
+ggplotly(top_sellers_plot,tooltip = "text")
+
+```
+
+<br>
+
+```{r, include = FALSE}
+
+seller_loan_counts19 <- data_2019 %>%
+  group_by(SELLER) %>%
+  summarise(Loan_Count = n()) %>%
+  arrange(desc(Loan_Count))  
+
+```
+
+```{r bc19, echo = FALSE, fig.width=10, fig.height = 4, fig.cap="The bar chart displays the distribution of loans across all sellers for the year 2019"}
+
+top_sellers_plot19 <- ggplot(seller_loan_counts19, aes(x =Loan_Count , y = reorder(SELLER, Loan_Count), text = paste("Seller: ", SELLER, "<br>Loan Count: ", Loan_Count)))+
+  geom_bar(stat = "identity", fill = "#FD4659") +
+  labs(x = "Number of Loans", y = NULL) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(vjust = 0.5, hjust=1, size = 10),
+        axis.text.y = element_text(size = 10),  
+        axis.title = element_text(size = 10))
+
+ggplotly(top_sellers_plot19,tooltip = "text")
+
+```
+
+<br>
+
+```{r, include = FALSE}
+
+top_5_sellers <- seller_loan_counts$SELLER[1:5]
+
+data_top_5 <- data_2007 %>%
+  filter(SELLER %in% top_5_sellers)
+
+
+```
+
+<br>
+
+```{r hist07, echo = FALSE, fig.width=10, fig.height = 8, fig.cap="The histogram illustrates the distribution of credit scores among the top 5 sellers with the highest number of loans in the year 2007"}
+
+custom_colors <- c("#F4C2C2", "#BAB50A", "#BA0A0F", "#0ABAB5","#C2DBF4")
+
+credit_score_histogram_top_5 <- ggplot(data_top_5, aes(x = CSCORE_B, fill = SELLER)) +
+  geom_histogram(binwidth = 10, position = "identity",color="black") +
+  labs(x = "Credit Score", y = "Frequency", fill = "Seller") +
+  facet_wrap(~SELLER, scales = "free", ncol = 2) +
+  scale_fill_manual(values = custom_colors) +
+  theme_minimal()+
+  theme(legend.position = "none",
+        axis.title = element_text(size = 12, face = "bold"),
+        strip.text = element_text(face = "bold", size = 10),
+        panel.grid.minor = element_blank()) 
+
+credit_score_histogram_top_5
+
+```
+
+<br>
+
+```{r, include = FALSE}
+
+#top 5 credit borrowers plot-2019
+
+top_5_sellers19 <- seller_loan_counts19$SELLER[1:5]
+
+
+data_top_519 <- data_2019 %>%
+  filter(SELLER %in% top_5_sellers19)
+
+```
+
+```{r hist19, echo = FALSE, fig.width=10, fig.height = 8, fig.cap="The histogram illustrates the distribution of credit scores among the top 5 sellers with the highest number of loans in the year 2019"}
+
+custom_colors <- c("#FF5733", "#FFD700", "#C70039", "#8000FF","#007FFF")
+
+credit_score_histogram_top_5_19 <- ggplot(data_top_519, aes(x = CSCORE_B, fill = SELLER)) +
+  geom_histogram(binwidth = 10, position = "identity", color="black") +
+  labs(x = "Credit Score", y = "Frequency", fill = "Seller") +
+  facet_wrap(~SELLER, scales = "free", ncol = 2) +
+  scale_fill_manual(values = custom_colors) +
+  theme_minimal()+
+  theme(legend.position = "none",
+        axis.title = element_text(size = 12, face = "bold"),
+        strip.text = element_text(face = "bold", size = 10),
+        panel.grid.minor = element_blank()) 
+
+credit_score_histogram_top_5_19 
+```
+
+<br>
+
+```{r, include = FALSE}
+
+us_map <- map_data("state")
+
+state_abbreviations <- data.frame(
+  region = tolower(state.name),
+  abb = state.abb
+)
+
+#2007
+
+avg_rate_by_state <- data_2007 %>%
+  group_by(STATE) %>%
+  summarise(avg_original_rate = mean(ORIG_RATE))
+
+map_data <- left_join(avg_rate_by_state, state_abbreviations, by = c("STATE" = "abb"))
+
+merged_data <- merge(us_map, map_data, by = "region")
+
+#2019
+
+avg_rate_by_state19 <- data_2019 %>%
+  group_by(STATE) %>%
+  summarise(avg_original_rate = mean(ORIG_RATE))
+
+map_data19 <- left_join(avg_rate_by_state19, state_abbreviations, by = c("STATE" = "abb"))
+
+merged_data19 <- merge(us_map, map_data19, by = "region")
+
+
+
+```
+
+```{r map07, echo = FALSE, fig.width=10, fig.height = 4, fig.cap="The interactive map displays the average original interest rate in each state for the year 2007"}
+
+plot <- ggplot(merged_data, aes(x = long, y = lat, group = group, fill = avg_original_rate, text = paste("State: ", region, "<br>Average Original Rate: ", avg_original_rate)))+
+  geom_polygon(aes(map_id = region), color = "black") +
+  scale_fill_gradient(name = "Average Original Rate", low = "#AAD4DD", high = "#063570") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(), 
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank())
+
+ggplotly(plot, tooltip='text')
+
+
+```
+
+<br>
+
+```{r map19, echo = FALSE, fig.width=10, fig.height = 4, fig.cap="The interactive map displays the average original interest rate \nin each state for the year 2019"}
+
+plot_2019 <- ggplot(merged_data19, aes(x = long, y = lat, group = group, fill = avg_original_rate, text = paste("State: ", region, "<br>Average Original Rate: ", avg_original_rate)))+
+  geom_polygon(aes(map_id = region), color = "black") + 
+  scale_fill_gradient(name = "Average Original Rate", low = "orange", high = "red") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(), 
+        axis.text.y = element_blank(), 
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank())
+
+
+ggplotly(plot_2019, tooltip = "text")
+```
+
+<br>
